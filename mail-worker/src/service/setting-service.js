@@ -186,7 +186,7 @@ const settingService = {
 
 		const settingRow = await this.get(c, true)
 
-		if (account.accountId) {
+		if (account.accountId !== 0) {
 		return {
 			register: settingRow.register,
 			title: settingRow.title,
@@ -216,7 +216,8 @@ const settingService = {
 			linuxdoClientId: settingRow.linuxdoClientId,
 			linuxdoCallbackUrl: settingRow.linuxdoCallbackUrl,
 			linuxdoSwitch: settingRow.linuxdoSwitch,
-			minEmailPrefix: settingRow.minEmailPrefix
+			minEmailPrefix: settingRow.minEmailPrefix,
+			test: account.accountId
 		};
 		} else {
 		return {
@@ -249,7 +250,8 @@ const settingService = {
 			linuxdoClientId: settingRow.linuxdoClientId,
 			linuxdoCallbackUrl: settingRow.linuxdoCallbackUrl,
 			linuxdoSwitch: settingRow.linuxdoSwitch,
-			minEmailPrefix: settingRow.minEmailPrefix
+			minEmailPrefix: settingRow.minEmailPrefix,
+			test: account.accountId
 		};
 		}
 	}
