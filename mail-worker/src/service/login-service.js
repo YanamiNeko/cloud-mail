@@ -201,7 +201,7 @@ const loginService = {
 
 	async login(c, params, noVerifyPwd = false) {
 
-		const { email, password } = params;
+		const { email, password, token } = params;
 
 		if ((!email || !password) && !noVerifyPwd) {
 			throw new BizError(t('emailAndPwdEmpty'));
@@ -223,6 +223,10 @@ const loginService = {
 
 		if (!await cryptoUtils.verifyPassword(password, userRow.salt, userRow.password) && !noVerifyPwd) {
 			throw new BizError(t('IncorrectPwd'));
+		}
+	
+		if (registerVerify === settingConst.registerVerify.OPEN) {
+			await turnstileService.verify(c,token)
 		}
 
 		const uuid = uuidv4();
