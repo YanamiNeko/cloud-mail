@@ -162,6 +162,7 @@ import {loginUserInfo} from "@/request/my.js";
 import {permsToRouter} from "@/perm/perm.js";
 import {useI18n} from "vue-i18n";
 import {oauthBindUser, oauthLinuxDoLogin} from "@/request/ouath.js";
+import {websiteConfig} from "@/request/setting.js";
 
 const {t} = useI18n();
 const accountStore = useAccountStore();
