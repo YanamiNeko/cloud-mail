@@ -186,7 +186,9 @@ const settingService = {
 
 		const settingRow = await this.get(c, true)
 
-		if (account.accountId) {
+		const user = c.get('user')          // 未登录：undefined
+  		const isLogin = !!user?.userId
+
 		return {
 			register: settingRow.register,
 			title: settingRow.title,
@@ -200,7 +202,7 @@ const settingService = {
 			siteKey: settingRow.siteKey,
 			background: settingRow.background,
 			loginOpacity: settingRow.loginOpacity,
-			domainList: settingRow.domainList,
+			domainList: isLogin ? safeDomainList(settingRow.domainList) : [],
 			regKey: settingRow.regKey,
 			regVerifyOpen: settingRow.regVerifyOpen,
 			addVerifyOpen: settingRow.addVerifyOpen,
@@ -219,41 +221,6 @@ const settingService = {
 			minEmailPrefix: settingRow.minEmailPrefix,
 			test: JSON.stringify(account.accountId)
 		};
-		} else {
-		return {
-			register: settingRow.register,
-			title: settingRow.title,
-			manyEmail: settingRow.manyEmail,
-			addEmail: settingRow.addEmail,
-			autoRefreshTime: settingRow.autoRefreshTime,
-			addEmailVerify: settingRow.addEmailVerify,
-			registerVerify: settingRow.registerVerify,
-			send: settingRow.send,
-			r2Domain: settingRow.r2Domain,
-			siteKey: settingRow.siteKey,
-			background: settingRow.background,
-			loginOpacity: settingRow.loginOpacity,
-			//domainList: settingRow.domainList,
-			domainList: [],
-			regKey: settingRow.regKey,
-			regVerifyOpen: settingRow.regVerifyOpen,
-			addVerifyOpen: settingRow.addVerifyOpen,
-			noticeTitle: settingRow.noticeTitle,
-			noticeContent: settingRow.noticeContent,
-			noticeType: settingRow.noticeType,
-			noticeDuration: settingRow.noticeDuration,
-			noticePosition: settingRow.noticePosition,
-			noticeWidth: settingRow.noticeWidth,
-			noticeOffset: settingRow.noticeOffset,
-			notice: settingRow.notice,
-			loginDomain: settingRow.loginDomain,
-			linuxdoClientId: settingRow.linuxdoClientId,
-			linuxdoCallbackUrl: settingRow.linuxdoCallbackUrl,
-			linuxdoSwitch: settingRow.linuxdoSwitch,
-			minEmailPrefix: settingRow.minEmailPrefix,
-			test: JSON.stringify(account.accountId)
-		};
-		}
 	}
 };
 
