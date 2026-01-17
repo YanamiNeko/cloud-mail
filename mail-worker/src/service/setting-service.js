@@ -217,7 +217,7 @@ const settingService = {
 			linuxdoCallbackUrl: settingRow.linuxdoCallbackUrl,
 			linuxdoSwitch: settingRow.linuxdoSwitch,
 			minEmailPrefix: settingRow.minEmailPrefix,
-			test: account.accountId
+			test: JSON.stringify(account.accountId)
 		};
 		} else {
 		return {
@@ -251,7 +251,7 @@ const settingService = {
 			linuxdoCallbackUrl: settingRow.linuxdoCallbackUrl,
 			linuxdoSwitch: settingRow.linuxdoSwitch,
 			minEmailPrefix: settingRow.minEmailPrefix,
-			test: account.accountId
+			test: JSON.stringify(account.accountId)
 		};
 		}
 	}
