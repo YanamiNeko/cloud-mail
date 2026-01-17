@@ -185,7 +185,7 @@ const settingService = {
 
 		const settingRow = await this.get(c, true)
 
-		const user = c.get('user')          // 未登录：undefined
+		const user = c.get('user') // 未登录：undefined
   		const isLogin = !!user?.userId
 
 		return {
