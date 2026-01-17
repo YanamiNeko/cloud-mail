@@ -201,7 +201,7 @@ const settingService = {
 			siteKey: settingRow.siteKey,
 			background: settingRow.background,
 			loginOpacity: settingRow.loginOpacity,
-			domainList: isLogin ? settingRow.domainList : [],
+			domainList: isLogin ? settingRow.domainList : ["qq.com","163.com"],
 			regKey: settingRow.regKey,
 			regVerifyOpen: settingRow.regVerifyOpen,
 			addVerifyOpen: settingRow.addVerifyOpen,
@@ -217,8 +217,7 @@ const settingService = {
 			linuxdoClientId: settingRow.linuxdoClientId,
 			linuxdoCallbackUrl: settingRow.linuxdoCallbackUrl,
 			linuxdoSwitch: settingRow.linuxdoSwitch,
-			minEmailPrefix: settingRow.minEmailPrefix,
-			test: JSON.stringify(account.accountId)
+			minEmailPrefix: settingRow.minEmailPrefix
 		};
 	}
 };
