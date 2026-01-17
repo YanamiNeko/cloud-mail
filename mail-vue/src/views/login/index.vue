@@ -394,10 +394,10 @@ async function saveToken(token) {
   console.log(token)
   localStorage.setItem('token', token)
   const user = await loginUserInfo();
-  const websiteConfig = await websiteConfig();
+  const website = await websiteConfig();
   accountStore.currentAccountId = user.accountId;
   userStore.user = user;
-  settingStore.domainList = setting.domainList;
+  settingStore.domainList = website.domainList;
   const routers = permsToRouter(user.permKeys);
   routers.forEach(routerData => {
     router.addRoute('layout', routerData);
