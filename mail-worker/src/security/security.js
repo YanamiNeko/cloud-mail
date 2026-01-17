@@ -88,6 +88,18 @@ app.use('*', async (c, next) => {
 
 	const path = c.req.path;
 
+  	c.header(
+    	'Content-Security-Policy',
+    	[
+      	"default-src 'self'",
+      	"script-src 'self' https://challenges.cloudflare.com",
+      	"frame-src https://challenges.cloudflare.com",
+      	"connect-src 'self' https://challenges.cloudflare.com",
+      	"img-src 'self' data:",
+      	"style-src 'self' 'unsafe-inline'",
+    	].join('; ')
+  	)
+
 	// /setting/websiteConfig：可选登录
   	if (path.startsWith('/setting/websiteConfig')) {
     	const jwt = c.req.header(constant.TOKEN_HEADER)
