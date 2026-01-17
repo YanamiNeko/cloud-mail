@@ -186,7 +186,7 @@ const settingService = {
 
 		const settingRow = await this.get(c, true)
 
-		if (account.accountId !== 0) {
+		if (account.accountId) {
 		return {
 			register: settingRow.register,
 			title: settingRow.title,
