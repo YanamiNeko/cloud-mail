@@ -382,8 +382,33 @@ const submit = () => {
     return
   }
 
+  if (!verifyToken && (settingStore.settings.registerVerify === 0 || (settingStore.settings.registerVerify === 2 && settingStore.settings.regVerifyOpen))) {
+    if (!verifyShow.value) {
+      verifyShow.value = true
+      nextTick(() => {
+        if (!turnstileId) {
+          try {
+            turnstileId = window.turnstile.render('.register-turnstile')
+          } catch (e) {
+            botJsError.value = true
+            console.log('人机验证js加载失败')
+          }
+        } else {
+          window.turnstile.reset('.register-turnstile')
+        }
+      })
+    } else if (!botJsError.value) {
+      ElMessage({
+        message: t('botVerifyMsg'),
+        type: "error",
+        plain: true
+      })
+    }
+    return;
+  }
+
   loginLoading.value = true
-  login(email, form.password).then(async data => {
+  login(email, form.password, verifyToken).then(async data => {
     await saveToken(data.token)
   }).finally(() => {
     loginLoading.value = false
