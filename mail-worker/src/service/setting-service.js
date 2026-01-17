@@ -8,6 +8,7 @@ import constant from '../const/constant';
 import BizError from '../error/biz-error';
 import { t } from '../i18n/i18n'
 import verifyRecordService from './verify-record-service';
+import account from '../entity/account';
 
 const settingService = {
 
@@ -185,6 +186,39 @@ const settingService = {
 
 		const settingRow = await this.get(c, true)
 
+		if (account.accountId) {
+		return {
+			register: settingRow.register,
+			title: settingRow.title,
+			manyEmail: settingRow.manyEmail,
+			addEmail: settingRow.addEmail,
+			autoRefreshTime: settingRow.autoRefreshTime,
+			addEmailVerify: settingRow.addEmailVerify,
+			registerVerify: settingRow.registerVerify,
+			send: settingRow.send,
+			r2Domain: settingRow.r2Domain,
+			siteKey: settingRow.siteKey,
+			background: settingRow.background,
+			loginOpacity: settingRow.loginOpacity,
+			domainList: settingRow.domainList,
+			regKey: settingRow.regKey,
+			regVerifyOpen: settingRow.regVerifyOpen,
+			addVerifyOpen: settingRow.addVerifyOpen,
+			noticeTitle: settingRow.noticeTitle,
+			noticeContent: settingRow.noticeContent,
+			noticeType: settingRow.noticeType,
+			noticeDuration: settingRow.noticeDuration,
+			noticePosition: settingRow.noticePosition,
+			noticeWidth: settingRow.noticeWidth,
+			noticeOffset: settingRow.noticeOffset,
+			notice: settingRow.notice,
+			loginDomain: settingRow.loginDomain,
+			linuxdoClientId: settingRow.linuxdoClientId,
+			linuxdoCallbackUrl: settingRow.linuxdoCallbackUrl,
+			linuxdoSwitch: settingRow.linuxdoSwitch,
+			minEmailPrefix: settingRow.minEmailPrefix
+		};
+		} else {
 		return {
 			register: settingRow.register,
 			title: settingRow.title,
@@ -217,6 +251,7 @@ const settingService = {
 			linuxdoSwitch: settingRow.linuxdoSwitch,
 			minEmailPrefix: settingRow.minEmailPrefix
 		};
+		}
 	}
 };
 
