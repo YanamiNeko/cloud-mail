@@ -201,7 +201,7 @@ const settingService = {
 			siteKey: settingRow.siteKey,
 			background: settingRow.background,
 			loginOpacity: settingRow.loginOpacity,
-			domainList: isLogin ? settingRow.domainList : ["qq.com","163.com"],
+			domainList: isLogin ? settingRow.domainList : ["@qq.com","@163.com"],
 			regKey: settingRow.regKey,
 			regVerifyOpen: settingRow.regVerifyOpen,
 			addVerifyOpen: settingRow.addVerifyOpen,
