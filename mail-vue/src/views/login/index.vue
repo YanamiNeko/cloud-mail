@@ -41,6 +41,16 @@
           </el-input>
           <el-input v-model="form.password" :placeholder="$t('password')" type="password" autocomplete="off">
           </el-input>
+          <div v-show="verifyShow"
+               class="register-turnstile"
+               :data-sitekey="settingStore.settings.siteKey"
+               data-callback="onTurnstileSuccess"
+               data-error-callback="onTurnstileError"
+               data-after-interactive-callback="loadAfter"
+               data-before-interactive-callback="loadBefore"
+          >
+            <span style="font-size: 12px;color: #F56C6C" v-if="botJsError">{{ $t('verifyModuleFailed') }}</span>
+          </div>
           <el-button class="btn" type="primary" @click="submit" :loading="loginLoading"
           >{{ $t('loginBtn') }}
           </el-button>
