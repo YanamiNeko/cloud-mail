@@ -8,7 +8,6 @@ import constant from '../const/constant';
 import BizError from '../error/biz-error';
 import { t } from '../i18n/i18n'
 import verifyRecordService from './verify-record-service';
-import account from '../entity/account';
 
 const settingService = {
 
