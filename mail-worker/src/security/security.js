@@ -88,6 +88,22 @@ app.use('*', async (c, next) => {
 
 	const path = c.req.path;
 
+	// /setting/websiteConfig：可选登录
+  	if (path.startsWith('/setting/websiteConfig')) {
+    	const jwt = c.req.header(constant.TOKEN_HEADER)
+    	if (jwt) {
+      		const result = await jwtUtils.verifyToken(c, jwt)
+      		if (result) {
+        		const { userId, token } = result
+        		const authInfo = await c.env.kv.get(KvConst.AUTH_INFO + userId, { type: 'json' })
+        		if (authInfo && Array.isArray(authInfo.tokens) && authInfo.tokens.includes(token)) {
+          			c.set('user', authInfo.user) // ✅ 登录态注入
+        		}
+      		}
+    	}
+    	return await next() // ✅ 无 token 也放行
+  	}
+
 	const index = exclude.findIndex(item => {
 		return path.startsWith(item);
 	});
