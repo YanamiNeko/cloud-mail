@@ -225,7 +225,7 @@ const loginService = {
 			throw new BizError(t('IncorrectPwd'));
 		}
 	
-		if (registerVerify === settingConst.registerVerify.OPEN) {
+		if (settingConst.registerVerify.OPEN) {
 			await turnstileService.verify(c,token)
 		}
 
