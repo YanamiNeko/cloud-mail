@@ -1,7 +1,14 @@
 import http from '@/axios/index.js';
 
+function buildParams(params) {
+    return Object.fromEntries(
+        Object.entries(params).filter(([, value]) => value !== undefined && value !== null && !Number.isNaN(value))
+    );
+}
+
 export function emailList(accountId, allReceive, emailId, timeSort, size, type) {
-    return http.get('/email/list', {params: {accountId, allReceive, emailId, timeSort, size, type}})
+    const params = buildParams({accountId, allReceive, emailId, timeSort, size, type});
+    return http.get('/email/list', {params});
 }
 
 export function emailDelete(emailIds) {
@@ -9,7 +16,8 @@ export function emailDelete(emailIds) {
 }
 
 export function emailLatest(emailId, accountId, allReceive) {
-    return http.get('/email/latest', {params: {emailId, accountId, allReceive}, noMsg: true, timeout: 35 * 1000})
+    const params = buildParams({emailId, accountId, allReceive});
+    return http.get('/email/latest', {params, noMsg: true, timeout: 35 * 1000})
 }
 
 export function emailRead(emailIds) {

@@ -72,8 +72,19 @@ function cancelStar(email) {
 }
 
 function getEmailList(emailId, size) {
-  const accountId =  accountStore.currentAccountId;
-  const allReceive = accountStore.currentAccount.allReceive;
+  const accountId = accountStore.currentAccount?.accountId ?? accountStore.currentAccountId;
+  const allReceive = accountStore.currentAccount?.allReceive ?? 0;
+  if (!accountId && allReceive === 0) {
+    return Promise.resolve({
+      list: [],
+      total: 0,
+      latestEmail: {
+        emailId: 0,
+        reqAccountId: accountId ?? 0,
+        allReceive,
+      }
+    });
+  }
   return emailList(accountId, allReceive, emailId, params.timeSort, size, 1).then(data => {
     data.latestEmail.reqAccountId = accountId;
     data.latestEmail.allReceive = allReceive;
