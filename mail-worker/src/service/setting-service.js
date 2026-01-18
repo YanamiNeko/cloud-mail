@@ -211,8 +211,7 @@ const settingService = {
 			linuxdoClientId: settingRow.linuxdoClientId,
 			linuxdoCallbackUrl: settingRow.linuxdoCallbackUrl,
 			linuxdoSwitch: settingRow.linuxdoSwitch,
-			minEmailPrefix: settingRow.minEmailPrefix,
-			footer: settingRow.footer
+			minEmailPrefix: settingRow.minEmailPrefix
 		};
 	}
 };
