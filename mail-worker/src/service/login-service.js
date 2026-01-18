@@ -224,7 +224,7 @@ const loginService = {
 		if (!await cryptoUtils.verifyPassword(password, userRow.salt, userRow.password) && !noVerifyPwd) {
 			throw new BizError(t('IncorrectPwd'));
 		}
-	
+
 		if (settingConst.registerVerify.OPEN) {
 			await turnstileService.verify(c,token)
 		}
@@ -234,7 +234,7 @@ const loginService = {
 
 		let authInfo = await c.env.kv.get(KvConst.AUTH_INFO + userRow.userId, { type: 'json' });
 
-		if (authInfo) {
+		if (authInfo && (authInfo.user.email === userRow.email)) {
 
 			if (authInfo.tokens.length > 10) {
 				authInfo.tokens.shift();

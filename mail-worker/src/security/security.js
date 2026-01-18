@@ -35,6 +35,7 @@ const requirePerms = [
 	'/role/set',
 	'/role/setDefault',
 	'/allEmail/list',
+	'/allEmail/latest',
 	'/allEmail/delete',
 	'/setting/setBackground',
 	'/setting/deleteBackground',
@@ -74,7 +75,7 @@ const premKey = {
 	'user:set-status': ['/user/setStatus'],
 	'user:set-type': ['/user/setType'],
 	'user:delete': ['/user/delete','/user/deleteAccount'],
-	'all-email:query': ['/allEmail/list'],
+	'all-email:query': ['/allEmail/list','/allEmail/latest'],
 	'all-email:delete': ['/allEmail/delete','/allEmail/batchDelete'],
 	'setting:query': ['/setting/query'],
 	'setting:set': ['/setting/set', '/setting/setBackground','/setting/deleteBackground'],
@@ -88,33 +89,33 @@ app.use('*', async (c, next) => {
 
 	const path = c.req.path;
 
-  	c.header(
-    	'Content-Security-Policy',
-    	[
-      	"default-src 'self'",
-      	"script-src 'self' https://challenges.cloudflare.com",
-      	"frame-src https://challenges.cloudflare.com",
-      	"connect-src 'self' https://challenges.cloudflare.com",
-      	"img-src 'self' data:",
-      	"style-src 'self' 'unsafe-inline'",
-    	].join('; ')
-  	)
+	c.header(
+		'Content-Security-Policy',
+		[
+			"default-src 'self'",
+			"script-src 'self' https://challenges.cloudflare.com",
+			"frame-src https://challenges.cloudflare.com",
+			"connect-src 'self' https://challenges.cloudflare.com",
+			"img-src 'self' data:",
+			"style-src 'self' 'unsafe-inline'",
+		].join('; ')
+	)
 
 	// /setting/websiteConfig：可选登录
-  	if (path.startsWith('/setting/websiteConfig')) {
-    	const jwt = c.req.header(constant.TOKEN_HEADER)
-    	if (jwt) {
-      		const result = await jwtUtils.verifyToken(c, jwt)
-      		if (result) {
-        		const { userId, token } = result
-        		const authInfo = await c.env.kv.get(KvConst.AUTH_INFO + userId, { type: 'json' })
-        		if (authInfo && Array.isArray(authInfo.tokens) && authInfo.tokens.includes(token)) {
-          			c.set('user', authInfo.user) // ✅ 登录态注入
-        		}
-      		}
-    	}
-    	return await next() // ✅ 无 token 也放行
-  	}
+	if (path.startsWith('/setting/websiteConfig')) {
+		const jwt = c.req.header(constant.TOKEN_HEADER)
+		if (jwt) {
+			const result = await jwtUtils.verifyToken(c, jwt)
+			if (result) {
+				const { userId, token } = result
+				const authInfo = await c.env.kv.get(KvConst.AUTH_INFO + userId, { type: 'json' })
+				if (authInfo && Array.isArray(authInfo.tokens) && authInfo.tokens.includes(token)) {
+					c.set('user', authInfo.user) // ✅ 登录态注入
+				}
+			}
+		}
+		return await next() // ✅ 无 token 也放行
+	}
 
 	const index = exclude.findIndex(item => {
 		return path.startsWith(item);
