@@ -16,7 +16,9 @@ export const useUiStore = defineStore('ui', {
             send: 0,
             sysEmail: 0
         },
-        setting: null,
+        setting: {
+            footer: ""
+        },
     }),
     actions: {
         showNotice() {
