@@ -15,7 +15,6 @@
             <Header />
         </el-header>
         <Main />
-        <div class="footer" v-if="uiStore.setting.footer" v-html="uiStore.setting.footer"></div>
       </el-main>
     </el-container>
   </el-container>
@@ -124,10 +123,4 @@ onBeforeUnmount(() => {
   opacity: 0;
 }
 
-.footer {
-  text-align: center;
-  padding: 20px;
-  color: var(--el-text-color-secondary);
-  font-size: 14px;
-}
 </style>

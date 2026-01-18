@@ -121,16 +121,6 @@
                 </div>
               </div>
               <div class="setting-item">
-                <div class="title-item"><span>Footer</span></div>
-                <div class="email-title">
-                  <span>{{ setting.footer || 'None' }}</span>
-                  <el-button class="opt-button" size="small" type="primary" @click="editFooterShow = true">
-                    <Icon icon="lsicon:edit-outline" width="16" height="16"/>
-                  </el-button>
-                </div>
-              </div>
-            </div>
-          </div>
 
           <!-- Email Sending Settings Card -->
           <div class="settings-card">
@@ -779,7 +769,6 @@ const localUpShow = ref(false)
 const accountStore = useAccountStore();
 const userStore = useUserStore();
 const editTitleShow = ref(false)
-const editFooterShow = ref(false)
 const resendTokenFormShow = ref(false)
 const r2DomainShow = ref(false)
 const turnstileShow = ref(false)
@@ -793,7 +782,6 @@ const settingStore = useSettingStore();
 const uiStore = useUiStore();
 const {settings: setting} = storeToRefs(settingStore);
 const editTitle = ref('')
-const editFooter = ref('')
 const settingLoading = ref(false)
 const clearS3Loading = ref(false)
 const r2DomainInput = ref('')
