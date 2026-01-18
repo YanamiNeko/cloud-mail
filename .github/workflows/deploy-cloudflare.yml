@@ -103,13 +103,8 @@ jobs:
         working-directory: ./mail-worker
         run: |
           echo "🚀 Starting deployment..."
-          npx wrangler deploy -c wrangler-action.toml \
-            | tee deploy.log \
-            | grep -vE "https://.*\.workers\.dev" || true
-          # 再做你原来的脱敏
-          sed -i 's/env\.domain (.*)/env.domain (***)/' deploy.log
-    
-          WORKER_URL=$(grep -oE "https://.*\.workers\.dev" deploy.log | head -n 1)
+          npx wrangler deploy -c wrangler-action.toml | tee deploy.log | grep -v "https://.*\.workers\.dev" | sed 's/env\.domain (.*)/env.domain (***)/'
+          WORKER_URL=$(grep -o "https://.*\.workers\.dev" deploy.log)
           echo "::add-mask::$WORKER_URL"
           echo "worker_url=$WORKER_URL" >> $GITHUB_OUTPUT
           echo "✅ Deployment completed."
