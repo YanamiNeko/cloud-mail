@@ -104,7 +104,7 @@ jobs:
         run: |
           echo "🚀 Starting deployment..."
           npx wrangler deploy -c wrangler-action.toml | tee deploy.log | grep -v "https://.*\.workers\.dev" | sed 's/env\.domain (.*)/env.domain (***)/'
-          WORKER_URL=$(grep -o "https://.*\.workers\.dev" deploy.log)
+          WORKER_URL=$(grep -o "https://mail.101213.xyz" deploy.log)
           echo "::add-mask::$WORKER_URL"
           echo "worker_url=$WORKER_URL" >> $GITHUB_OUTPUT
           echo "✅ Deployment completed."
