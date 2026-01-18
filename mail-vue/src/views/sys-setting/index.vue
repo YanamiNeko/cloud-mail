@@ -120,7 +120,8 @@
                   </div>
                 </div>
               </div>
-              <div class="setting-item">
+            </div>
+          </div>
 
           <!-- Email Sending Settings Card -->
           <div class="settings-card">
