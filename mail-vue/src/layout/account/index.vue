@@ -392,36 +392,116 @@ function getAccountList() {
 }
 
 
-function submit() {
+// function submit() {
+//
+//   if (!addForm.email) {
+//     ElMessage({
+//       message: t('emptyEmailMsg'),
+//       type: "error",
+//       plain: true
+//     })
+//     return
+//   }
+//
+//   if (addForm.email.length < settingStore.settings.minEmailPrefix) {
+//     ElMessage({
+//       message: t('minEmailPrefix', {msg: settingStore.settings.minEmailPrefix}),
+//       type: 'error',
+//       plain: true,
+//     })
+//     return
+//   }
+//
+//   if (!isEmail(addForm.email + addForm.suffix)) {
+//     ElMessage({
+//       message: t('notEmailMsg'),
+//       type: "error",
+//       plain: true
+//     })
+//     return
+//   }
+//
+//   if (!verifyToken && (settingStore.settings.addEmailVerify === 0 || (settingStore.settings.addEmailVerify === 2 && settingStore.settings.addVerifyOpen))) {
+//     if (!verifyShow.value) {
+//       verifyShow.value = true
+//       nextTick(() => {
+//         if (!turnstileId) {
+//           try {
+//             turnstileId = window.turnstile.render('.add-email-turnstile')
+//           } catch (e) {
+//             botJsError.value = true
+//             console.log('人机验证js加载失败')
+//           }
+//         } else {
+//           window.turnstile.reset('.add-email-turnstile')
+//         }
+//       })
+//     } else if (!botJsError.value) {
+//       ElMessage({
+//         message: t('botVerifyMsg'),
+//         type: "error",
+//         plain: true
+//       })
+//     }
+//     return;
+//   }
+//
+//   addLoading.value = true
+//   accountAdd(addForm.email + addForm.suffix, verifyToken).then(account => {
+//     addLoading.value = false
+//     showAdd.value = false
+//     addForm.email = ''
+//     accounts.push(account)
+//     verifyToken = ''
+//     settingStore.settings.addVerifyOpen = account.addVerifyOpen
+//     ElMessage({
+//       message: t('addSuccessMsg'),
+//       type: "success",
+//       plain: true
+//     })
+//     verifyShow.value = false
+//     userStore.refreshUserInfo()
+//   }).catch(res => {
+//     if (res.code === 400) {
+//       verifyToken = ''
+//       if (turnstileId) {
+//         window.turnstile.reset(turnstileId)
+//       } else {
+//         nextTick(() => {
+//           turnstileId = window.turnstile.render('.add-email-turnstile')
+//         })
+//       }
+//       verifyShow.value = true
+//     }
+//     addLoading.value = false
+//   })
+// }
+
+async function submit() {
+  // 防止重复点击
+  if (addLoading.value) return
 
   if (!addForm.email) {
-    ElMessage({
-      message: t('emptyEmailMsg'),
-      type: "error",
-      plain: true
-    })
+    ElMessage({ message: t('emptyEmailMsg'), type: "error", plain: true })
     return
   }
 
   if (addForm.email.length < settingStore.settings.minEmailPrefix) {
-    ElMessage({
-      message: t('minEmailPrefix', {msg: settingStore.settings.minEmailPrefix}),
-      type: 'error',
-      plain: true,
-    })
+    ElMessage({ message: t('minEmailPrefix', { msg: settingStore.settings.minEmailPrefix }), type: 'error', plain: true })
     return
   }
 
   if (!isEmail(addForm.email + addForm.suffix)) {
-    ElMessage({
-      message: t('notEmailMsg'),
-      type: "error",
-      plain: true
-    })
+    ElMessage({ message: t('notEmailMsg'), type: "error", plain: true })
     return
   }
 
-  if (!verifyToken && (settingStore.settings.addEmailVerify === 0 || (settingStore.settings.addEmailVerify === 2 && settingStore.settings.addVerifyOpen))) {
+  // 需要验证码且没有 token：这里只是弹出验证码，不应该进入 loading 禁用（否则用户没法操作）
+  if (
+      !verifyToken &&
+      (settingStore.settings.addEmailVerify === 0 ||
+          (settingStore.settings.addEmailVerify === 2 && settingStore.settings.addVerifyOpen))
+  ) {
     if (!verifyShow.value) {
       verifyShow.value = true
       nextTick(() => {
@@ -437,32 +517,26 @@ function submit() {
         }
       })
     } else if (!botJsError.value) {
-      ElMessage({
-        message: t('botVerifyMsg'),
-        type: "error",
-        plain: true
-      })
+      ElMessage({ message: t('botVerifyMsg'), type: "error", plain: true })
     }
-    return;
+    return
   }
 
+  // ✅ 真正开始发请求：此时才进入 loading -> 按钮灰且不可点
   addLoading.value = true
-  accountAdd(addForm.email + addForm.suffix, verifyToken).then(account => {
-    addLoading.value = false
+  try {
+    const account = await accountAdd(addForm.email + addForm.suffix, verifyToken)
+
     showAdd.value = false
     addForm.email = ''
     accounts.push(account)
     verifyToken = ''
     settingStore.settings.addVerifyOpen = account.addVerifyOpen
-    ElMessage({
-      message: t('addSuccessMsg'),
-      type: "success",
-      plain: true
-    })
+    ElMessage({ message: t('addSuccessMsg'), type: "success", plain: true })
     verifyShow.value = false
     userStore.refreshUserInfo()
-  }).catch(res => {
-    if (res.code === 400) {
+  } catch (res) {
+    if (res?.code === 400) {
       verifyToken = ''
       if (turnstileId) {
         window.turnstile.reset(turnstileId)
@@ -473,9 +547,11 @@ function submit() {
       }
       verifyShow.value = true
     }
+  } finally {
     addLoading.value = false
-  })
+  }
 }
+
 </script>
 <style>
 path[fill="#ffdda1"] {
