@@ -412,12 +412,6 @@
           <el-button type="primary" :loading="settingLoading" @click="saveTitle">{{ $t('save') }}</el-button>
         </form>
       </el-dialog>
-      <el-dialog v-model="editFooterShow" title="Change Footer" width="340" @closed="editFooter = setting.footer">
-        <form>
-          <el-input type="textarea" :rows="3" placeholder="Footer (HTML supported)" v-model="editFooter"/>
-          <el-button type="primary" :loading="settingLoading" @click="saveFooter">{{ $t('save') }}</el-button>
-        </form>
-      </el-dialog>
       <el-dialog v-model="resendTokenFormShow" :title="$t('resendToken')" width="340" @closed="cleanResendTokenForm">
         <form>
           <el-select style="margin-bottom: 15px" v-model="resendTokenForm.domain" placeholder="Select">
