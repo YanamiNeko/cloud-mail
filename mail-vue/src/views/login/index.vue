@@ -399,6 +399,12 @@ const submit = () => {
         if (!turnstileId) {
           try {
             turnstileId = window.turnstile.render('.register-turnstile')
+            loginLoading.value = true
+            login(email, form.password, verifyToken).then(async data => {
+              await saveToken(data.token)
+            }).finally(() => {
+              loginLoading.value = false
+            })
           } catch (e) {
             botJsError.value = true
             console.log('人机验证js加载失败')
@@ -430,7 +436,8 @@ async function saveToken(token) {
   localStorage.setItem('token', token)
   const user = await loginUserInfo();
   const website = await websiteConfig();
-  accountStore.currentAccountId = user.accountId;
+  accountStore.currentAccountId = user.account.accountId;
+  accountStore.currentAccount = user.account;
   userStore.user = user;
   settingStore.domainList = website.domainList;
   const routers = permsToRouter(user.permKeys);
