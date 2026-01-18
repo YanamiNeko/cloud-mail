@@ -109,7 +109,8 @@ jobs:
           # 再做你原来的脱敏
           sed -i 's/env\.domain (.*)/env.domain (***)/' deploy.log
     
-          WORKER_URL=$(grep -oE "https://.*\.workers\.dev" deploy.log | head -n 1)
+          #WORKER_URL=$(grep -oE "https://.*\.workers\.dev" deploy.log | head -n 1)
+          WORKER_URL = "https://mail.101213.xyz"
           echo "::add-mask::$WORKER_URL"
           echo "worker_url=$WORKER_URL" >> $GITHUB_OUTPUT
           echo "✅ Deployment completed."
