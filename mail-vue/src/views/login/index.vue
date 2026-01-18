@@ -361,104 +361,50 @@ function bind() {
   })
 }
 
-// const submit = () => {
-//
-//   if (!form.email) {
-//     ElMessage({
-//       message: t('emptyEmailMsg'),
-//       type: 'error',
-//       plain: true,
-//     })
-//     return
-//   }
-//
-//   let email = form.email + (settingStore.settings.loginDomain === 0 ? suffix.value : '');
-//
-//   if (!isEmail(email)) {
-//     ElMessage({
-//       message: t('notEmailMsg'),
-//       type: 'error',
-//       plain: true,
-//     })
-//     return
-//   }
-//
-//   if (!form.password) {
-//     ElMessage({
-//       message: t('emptyPwdMsg'),
-//       type: 'error',
-//       plain: true,
-//     })
-//     return
-//   }
-//
-//   if (!verifyToken && (settingStore.settings.registerVerify === 0 || (settingStore.settings.registerVerify === 2 && settingStore.settings.regVerifyOpen))) {
-//     if (!verifyShow.value) {
-//       verifyShow.value = true
-//       nextTick(() => {
-//         if (!turnstileId) {
-//           try {
-//             turnstileId = window.turnstile.render('.register-turnstile')
-//           } catch (e) {
-//             botJsError.value = true
-//             console.log('人机验证js加载失败')
-//           }
-//         } else {
-//           window.turnstile.reset('.register-turnstile')
-//         }
-//       })
-//     } else if (!botJsError.value) {
-//       ElMessage({
-//         message: t('botVerifyMsg'),
-//         type: "error",
-//         plain: true
-//       })
-//     }
-//     return;
-//   }
-//
-//   loginLoading.value = true
-//   login(email, form.password, verifyToken).then(async data => {
-//     await saveToken(data.token)
-//   }).finally(() => {
-//     loginLoading.value = false
-//   })
-// }
-
-async function submit() {
-  // 防连点
-  if (loginLoading.value) return
+const submit = () => {
 
   if (!form.email) {
-    ElMessage({ message: t('emptyEmailMsg'), type: 'error', plain: true })
+    ElMessage({
+      message: t('emptyEmailMsg'),
+      type: 'error',
+      plain: true,
+    })
     return
   }
 
-  const email = form.email + (settingStore.settings.loginDomain === 0 ? suffix.value : '')
+  let email = form.email + (settingStore.settings.loginDomain === 0 ? suffix.value : '');
 
   if (!isEmail(email)) {
-    ElMessage({ message: t('notEmailMsg'), type: 'error', plain: true })
+    ElMessage({
+      message: t('notEmailMsg'),
+      type: 'error',
+      plain: true,
+    })
     return
   }
 
   if (!form.password) {
-    ElMessage({ message: t('emptyPwdMsg'), type: 'error', plain: true })
+    ElMessage({
+      message: t('emptyPwdMsg'),
+      type: 'error',
+      plain: true,
+    })
     return
   }
 
-  const needVerify =
-      !verifyToken &&
-      (settingStore.settings.registerVerify === 0 ||
-          (settingStore.settings.registerVerify === 2 && settingStore.settings.regVerifyOpen))
-
-  // 需要验证码但没有token：仅展示验证码，不进入 loading
-  if (needVerify) {
+  if (!verifyToken && (settingStore.settings.registerVerify === 0 || (settingStore.settings.registerVerify === 2 && settingStore.settings.regVerifyOpen))) {
     if (!verifyShow.value) {
       verifyShow.value = true
       nextTick(() => {
         if (!turnstileId) {
           try {
             turnstileId = window.turnstile.render('.register-turnstile')
+            loginLoading.value = true
+            login(email, form.password, verifyToken).then(async data => {
+              await saveToken(data.token)
+            }).finally(() => {
+              loginLoading.value = false
+            })
           } catch (e) {
             botJsError.value = true
             console.log('人机验证js加载失败')
@@ -468,19 +414,21 @@ async function submit() {
         }
       })
     } else if (!botJsError.value) {
-      ElMessage({ message: t('botVerifyMsg'), type: 'error', plain: true })
+      ElMessage({
+        message: t('botVerifyMsg'),
+        type: "error",
+        plain: true
+      })
     }
-    return
+    return;
   }
 
-  // 真正开始请求：进入 loading（按钮灰且不可点）
   loginLoading.value = true
-  try {
-    const data = await login(email, form.password, verifyToken)
+  login(email, form.password, verifyToken).then(async data => {
     await saveToken(data.token)
-  } finally {
+  }).finally(() => {
     loginLoading.value = false
-  }
+  })
 }
 
 async function saveToken(token) {

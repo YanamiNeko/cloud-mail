@@ -100,19 +100,10 @@
             </div>
           </template>
         </el-input>
-
-        <!-- ✅ loading 时按钮灰且不可点 -->
-        <el-button
-            class="btn"
-            type="primary"
-            @click="submit"
-            :loading="addLoading"
-            :disabled="addLoading"
-        >
-          {{ $t('add') }}
+        <el-button class="btn" type="primary" @click="submit" :loading="addLoading"
+        >{{ $t('add') }}
         </el-button>
       </div>
-
       <div
           class="add-email-turnstile"
           :class="verifyShow ? 'turnstile-show' : 'turnstile-hide'"
@@ -123,18 +114,17 @@
         <span style="font-size: 12px;color: #F56C6C" v-if="botJsError">{{ $t('verifyModuleFailed') }}</span>
       </div>
     </el-dialog>
-
     <el-dialog v-model="setNameShow" :title="$t('changeUserName')">
       <div class="container">
-        <el-input v-model="accountName" type="text" :placeholder="$t('username')" autocomplete="off"/>
-        <el-button class="btn" type="primary" @click="setName" :loading="setNameLoading">
-          {{ $t('save') }}
+        <el-input v-model="accountName" type="text" :placeholder="$t('username')" autocomplete="off">
+        </el-input>
+        <el-button class="btn" type="primary" @click="setName" :loading="setNameLoading"
+        >{{ $t('save') }}
         </el-button>
       </div>
     </el-dialog>
   </div>
 </template>
-
 <script setup>
 import {Icon} from "@iconify/vue";
 import {nextTick, reactive, ref, watch} from "vue";
@@ -154,7 +144,6 @@ const userStore = useUserStore();
 const accountStore = useAccountStore();
 const settingStore = useSettingStore();
 const emailStore = useEmailStore();
-
 const showAdd = ref(false)
 const addLoading = ref(false);
 const domainList = settingStore.domainList
@@ -174,15 +163,10 @@ const botJsError = ref(false)
 let verifyToken = ''
 let verifyErrorCount = 0
 let first = true
-
-// ✅ 关键：点过“添加”但还没 token 时，标记为待提交；验证码通过后自动提交（不需要二次点击）
-const pendingAddSubmit = ref(false)
-
 const addForm = reactive({
   email: '',
   suffix: settingStore.domainList[0]
 })
-
 let skeletonRows = 10
 const queryParams = {
   accountId: 0,
@@ -199,12 +183,15 @@ watch(() => accountStore.changeUserAccountName, () => {
   accounts[0].name = accountStore.changeUserAccountName
 })
 
+
 const openSelect = () => {
   mySelect.value.toggleMenu()
 }
 
 window.onTurnstileError = (e) => {
-  if (verifyErrorCount >= 4) return
+  if (verifyErrorCount >= 4) {
+    return
+  }
   verifyErrorCount++
   console.warn('人机验加载失败', e)
   setTimeout(() => {
@@ -212,87 +199,15 @@ window.onTurnstileError = (e) => {
       if (!turnstileId) {
         turnstileId = window.turnstile.render('.add-email-turnstile')
       } else {
-        window.turnstile.reset(turnstileId)
+        window.turnstile.reset(turnstileId);
       }
     })
   }, 1500)
 };
 
-// ✅ 验证码通过：自动提交（如果此前点过添加）
 window.onTurnstileSuccess = (token) => {
-  verifyToken = token
-
-  if (pendingAddSubmit.value) {
-    pendingAddSubmit.value = false
-    const v = validateAdd()
-    if (!v.ok) return
-    doAdd(v.email, verifyToken)
-  }
+  verifyToken = token;
 };
-
-function needAddVerify() {
-  return settingStore.settings.addEmailVerify === 0 ||
-      (settingStore.settings.addEmailVerify === 2 && settingStore.settings.addVerifyOpen)
-}
-
-function buildAddEmail() {
-  return addForm.email + addForm.suffix
-}
-
-function validateAdd() {
-  if (!addForm.email) {
-    ElMessage({ message: t('emptyEmailMsg'), type: 'error', plain: true })
-    return { ok: false }
-  }
-
-  if (addForm.email.length < settingStore.settings.minEmailPrefix) {
-    ElMessage({ message: t('minEmailPrefix', { msg: settingStore.settings.minEmailPrefix }), type: 'error', plain: true })
-    return { ok: false }
-  }
-
-  const email = buildAddEmail()
-  if (!isEmail(email)) {
-    ElMessage({ message: t('notEmailMsg'), type: 'error', plain: true })
-    return { ok: false }
-  }
-
-  return { ok: true, email }
-}
-
-async function doAdd(email, token) {
-  if (addLoading.value) return
-  addLoading.value = true
-  try {
-    const account = await accountAdd(email, token)
-
-    showAdd.value = false
-    addForm.email = ''
-    accounts.push(account)
-    verifyToken = ''
-    settingStore.settings.addVerifyOpen = account.addVerifyOpen
-
-    ElMessage({ message: t('addSuccessMsg'), type: 'success', plain: true })
-    verifyShow.value = false
-    userStore.refreshUserInfo()
-  } catch (res) {
-    if (res?.code === 400) {
-      // token 失效/错误：重新验证，并保持“待提交”状态（通过后会自动提交）
-      verifyToken = ''
-      pendingAddSubmit.value = true
-
-      if (turnstileId) {
-        window.turnstile.reset(turnstileId)
-      } else {
-        nextTick(() => {
-          turnstileId = window.turnstile.render('.add-email-turnstile')
-        })
-      }
-      verifyShow.value = true
-    }
-  } finally {
-    addLoading.value = false
-  }
-}
 
 function getSkeletonRows() {
   if (accounts.length > 20) return skeletonRows = 20
@@ -301,6 +216,7 @@ function getSkeletonRows() {
 }
 
 function setName() {
+
   let name = accountName.value
 
   if (name === account.name) {
@@ -309,8 +225,12 @@ function setName() {
   }
 
   if (!name) {
-    ElMessage({ message: t('emptyUserNameMsg'), type: 'error', plain: true })
-    return
+    ElMessage({
+      message: t('emptyUserNameMsg'),
+      type: 'error',
+      plain: true,
+    })
+    return;
   }
 
   setNameLoading.value = true
@@ -322,7 +242,11 @@ function setName() {
       userStore.user.name = name
     }
 
-    ElMessage({ message: t('saveSuccessMsg'), type: "success", plain: true })
+    ElMessage({
+      message: t('saveSuccessMsg'),
+      type: "success",
+      plain: true
+    })
   }).finally(() => {
     setNameLoading.value = false
   })
@@ -343,13 +267,18 @@ function setAllReceive(account) {
     if (allReceiveAccount) allReceiveAccount.allReceive = AccountAllReceiveEnum.ENABLED;
   }).then(() => {
     if (account.allReceive === AccountAllReceiveEnum.ENABLED) {
-      ElMessage({ message: t('setSuccess'), type: 'success', plain: true })
+      ElMessage({
+        message: t('setSuccess'),
+        type: 'success',
+        plain: true,
+      })
     }
     changeAccount(account);
     emailStore.emailScroll?.refreshList();
     emailStore.sendScroll?.refreshList();
   })
 }
+
 
 function showNullSetting(item) {
   return !hasPerm('email:send') && !(item.accountId !== userStore.user.account.accountId && hasPerm('account:delete'))
@@ -371,13 +300,19 @@ function remove(account) {
       if (accounts.length < queryParams.size) {
         getAccountList()
       }
-      ElMessage({ message: t('delSuccessMsg'), type: 'success', plain: true })
+      ElMessage({
+        message: t('delSuccessMsg'),
+        type: 'success',
+        plain: true,
+      })
     })
   });
 }
 
 function refresh() {
-  if (loading.value) return
+  if (loading.value) {
+    return
+  }
   loading.value = false
   followLoading.value = false
   noLoading.value = false
@@ -403,29 +338,47 @@ function add() {
 async function copyAccount(account) {
   try {
     await navigator.clipboard.writeText(account);
-    ElMessage({ message: t('copySuccessMsg'), type: 'success', plain: true })
+    ElMessage({
+      message: t('copySuccessMsg'),
+      type: 'success',
+      plain: true,
+    })
   } catch (err) {
     console.error(`${t('copyFailMsg')}:`, err);
-    ElMessage({ message: t('copyFailMsg'), type: 'error', plain: true })
+    ElMessage({
+      message: t('copyFailMsg'),
+      type: 'error',
+      plain: true,
+    })
   }
 }
 
 function getAccountList() {
+
   if (loading.value || followLoading.value || noLoading.value) return;
 
-  if (accounts.length === 0) loading.value = true
-  else followLoading.value = true
+  if (accounts.length === 0) {
+    loading.value = true
+  } else {
+    followLoading.value = true
+  }
 
   let start = Date.now();
 
   accountList(queryParams.accountId, queryParams.size).then(async list => {
+
     let end = Date.now();
     let duration = end - start;
-    if (duration < 300) await sleep(300 - duration)
+    if (duration < 300) {
+      await sleep(300 - duration)
+    }
 
-    if (list.length < queryParams.size) noLoading.value = true
-    if (accounts.length === 0) accountStore.currentAccount = list[0]
-
+    if (list.length < queryParams.size) {
+      noLoading.value = true
+    }
+    if (accounts.length === 0) {
+      accountStore.currentAccount = list[0]
+    }
     queryParams.accountId = list.at(-1).accountId
     accounts.push(...list)
 
@@ -439,49 +392,128 @@ function getAccountList() {
 }
 
 function submit() {
-  if (addLoading.value) return
 
-  const v = validateAdd()
-  if (!v.ok) return
+  if (!addForm.email) {
+    ElMessage({
+      message: t('emptyEmailMsg'),
+      type: "error",
+      plain: true
+    })
+    return
+  }
 
-  // ✅ 需要验证码但还没 token：展示验证码 + 标记待提交；通过后回调自动提交
-  if (!verifyToken && needAddVerify()) {
-    pendingAddSubmit.value = true
+  if (addForm.email.length < settingStore.settings.minEmailPrefix) {
+    ElMessage({
+      message: t('minEmailPrefix', {msg: settingStore.settings.minEmailPrefix}),
+      type: 'error',
+      plain: true,
+    })
+    return
+  }
 
+  if (!isEmail(addForm.email + addForm.suffix)) {
+    ElMessage({
+      message: t('notEmailMsg'),
+      type: "error",
+      plain: true
+    })
+    return
+  }
+
+  if (!verifyToken && (settingStore.settings.addEmailVerify === 0 || (settingStore.settings.addEmailVerify === 2 && settingStore.settings.addVerifyOpen))) {
     if (!verifyShow.value) {
       verifyShow.value = true
       nextTick(() => {
         if (!turnstileId) {
           try {
             turnstileId = window.turnstile.render('.add-email-turnstile')
+            accountAdd(addForm.email + addForm.suffix, verifyToken).then(account => {
+              addLoading.value = false
+              showAdd.value = false
+              addForm.email = ''
+              accounts.push(account)
+              verifyToken = ''
+              settingStore.settings.addVerifyOpen = account.addVerifyOpen
+              ElMessage({
+                message: t('addSuccessMsg'),
+                type: "success",
+                plain: true
+              })
+              verifyShow.value = false
+              userStore.refreshUserInfo()
+            }).catch(res => {
+              if (res.code === 400) {
+                verifyToken = ''
+                if (turnstileId) {
+                  window.turnstile.reset(turnstileId)
+                } else {
+                  nextTick(() => {
+                    turnstileId = window.turnstile.render('.add-email-turnstile')
+                  })
+                }
+                verifyShow.value = true
+              }
+              addLoading.value = false
+            })
           } catch (e) {
             botJsError.value = true
             console.log('人机验证js加载失败')
           }
         } else {
-          window.turnstile.reset(turnstileId)
+          window.turnstile.reset('.add-email-turnstile')
         }
       })
     } else if (!botJsError.value) {
-      ElMessage({ message: t('botVerifyMsg'), type: 'error', plain: true })
+      ElMessage({
+        message: t('botVerifyMsg'),
+        type: "error",
+        plain: true
+      })
     }
-
-    return
+    return;
   }
 
-  pendingAddSubmit.value = false
-  doAdd(v.email, verifyToken)
+  addLoading.value = true
+  accountAdd(addForm.email + addForm.suffix, verifyToken).then(account => {
+    addLoading.value = false
+    showAdd.value = false
+    addForm.email = ''
+    accounts.push(account)
+    verifyToken = ''
+    settingStore.settings.addVerifyOpen = account.addVerifyOpen
+    ElMessage({
+      message: t('addSuccessMsg'),
+      type: "success",
+      plain: true
+    })
+    verifyShow.value = false
+    userStore.refreshUserInfo()
+  }).catch(res => {
+    if (res.code === 400) {
+      verifyToken = ''
+      if (turnstileId) {
+        window.turnstile.reset(turnstileId)
+      } else {
+        nextTick(() => {
+          turnstileId = window.turnstile.render('.add-email-turnstile')
+        })
+      }
+      verifyShow.value = true
+    }
+    addLoading.value = false
+  })
 }
-</script>
 
+
+</script>
 <style>
 path[fill="#ffdda1"] {
   fill: #ffdd7d;
 }
 </style>
-
 <style scoped lang="scss">
 .account-box {
+
   border-right: 1px solid var(--el-border-color) !important;
   background-color: var(--el-bg-color);
   height: 100%;
@@ -495,10 +527,21 @@ path[fill="#ffdda1"] {
     padding-left: 10px;
     padding-right: 10px;
 
-    .icon { cursor: pointer; }
-    .refresh { margin-left: 10px; }
-    .add { margin-left: 2px; }
-    .head-opt:not(.add) .refresh { margin-left: 5px; }
+    .icon {
+      cursor: pointer;
+    }
+
+    .refresh {
+      margin-left: 10px;
+    }
+
+    .add {
+      margin-left: 2px;
+    }
+
+    .head-opt:not(.add) .refresh {
+      margin-left: 5px;
+    }
   }
 
   .scrollbar {
@@ -579,6 +622,7 @@ path[fill="#ffdda1"] {
   }
 }
 
+
 .setting-icon {
   position: relative;
   top: 6px;
@@ -625,4 +669,5 @@ path[fill="#ffdda1"] {
   pointer-events: none;
   position: fixed;
 }
+
 </style>

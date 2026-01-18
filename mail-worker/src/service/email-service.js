@@ -23,54 +23,165 @@ import {sleep} from "../utils/time-utils";
 
 const emailService = {
 
-	async list(c, params, userId) {
+	// async list(c, params, userId) {
+	//
+	// 	let { emailId, type, accountId, size, timeSort, allReceive } = params;
+	//
+	// 	size = Number(size);
+	// 	emailId = Number(emailId);
+	// 	timeSort = Number(timeSort);
+	// 	accountId = Number(accountId);
+	// 	allReceive = Number(allReceive);
+	//
+	// 	if (size > 50) {
+	// 		size = 50;
+	// 	}
+	//
+	// 	if (!emailId) {
+	//
+	// 		if (timeSort) {
+	// 			emailId = 0;
+	// 		} else {
+	// 			emailId = 9999999999;
+	// 		}
+	//
+	// 	}
+	//
+	// 	if (isNaN(allReceive)) {
+	// 		let accountRow = await accountService.selectById(c, accountId);
+	// 		allReceive = accountRow.allReceive;
+	// 	}
+	//
+	// 	const query = orm(c)
+	// 		.select({
+	// 			...email,
+	// 			starId: star.starId
+	// 		})
+	// 		.from(email)
+	// 		.leftJoin(
+	// 			star,
+	// 			and(
+	// 				eq(star.emailId, email.emailId),
+	// 				eq(star.userId, userId)
+	// 			)
+	// 		).leftJoin(
+	// 			account,
+	// 			eq(account.accountId, email.accountId)
+	// 		)
+	// 		.where(
+	// 			and(
+	// 				allReceive ? eq(1,1) : eq(email.accountId, accountId),
+	// 				eq(email.userId, userId),
+	// 				timeSort ? gt(email.emailId, emailId) : lt(email.emailId, emailId),
+	// 				eq(email.type, type),
+	// 				eq(email.isDel, isDel.NORMAL),
+	// 				eq(account.isDel, isDel.NORMAL)
+	// 			)
+	// 		);
+	//
+	// 	if (timeSort) {
+	// 		query.orderBy(asc(email.emailId));
+	// 	} else {
+	// 		query.orderBy(desc(email.emailId));
+	// 	}
+	//
+	// 	const listQuery = query.limit(size).all();
+	//
+	// 	const totalQuery = orm(c).select({ total: count() }).from(email)
+	// 		.leftJoin(
+	// 			account,
+	// 			eq(account.accountId, email.accountId)
+	// 		)
+	// 		.where(
+	// 			and(
+	// 				allReceive ? eq(1,1) : eq(email.accountId, accountId),
+	// 				eq(email.userId, userId),
+	// 				eq(email.type, type),
+	// 				eq(email.isDel, isDel.NORMAL),
+	// 				eq(account.isDel, isDel.NORMAL)
+	// 			)
+	// 	).get();
+	//
+	// 	const latestEmailQuery = orm(c).select().from(email).where(
+	// 		and(
+	// 			allReceive ? eq(1,1) : eq(email.accountId, accountId),
+	// 			eq(email.userId, userId),
+	// 			eq(email.type, type),
+	// 			eq(email.isDel, isDel.NORMAL)
+	// 		))
+	// 		.orderBy(desc(email.emailId)).limit(1).get();
+	//
+	// 	let [list, totalRow, latestEmail] = await Promise.all([listQuery, totalQuery, latestEmailQuery]);
+	//
+	// 	list = list.map(item => ({
+	// 		...item,
+	// 		isStar: item.starId != null ? 1 : 0
+	// 	}));
+	//
+	//
+	// 	await this.emailAddAtt(c, list);
+	//
+	// 	if (!latestEmail) {
+	// 		latestEmail = {
+	// 			emailId: 0,
+	// 			accountId: accountId,
+	// 			userId: userId,
+	// 		}
+	// 	}
+	//
+	// 	return { list, total: totalRow.total, latestEmail };
+	// },
 
-		let { emailId, type, accountId, size, timeSort, allReceive } = params;
+	async list(c, params = {}, userId) {
+		// 1) 参数默认值（避免 undefined -> Number() = NaN）
+		let {
+			emailId = 0,
+			type = 0,
+			accountId = 0,
+			size = 20,
+			timeSort = 0,
+			allReceive, // 这里先不默认 0，保留“未传则走账号配置”的语义
+		} = params;
 
+		// 2) 统一转数字 + 兜底
 		size = Number(size);
 		emailId = Number(emailId);
 		timeSort = Number(timeSort);
 		accountId = Number(accountId);
 		allReceive = Number(allReceive);
 
-		if (size > 50) {
-			size = 50;
+		if (!Number.isFinite(size) || size <= 0) size = 20;
+		if (size > 50) size = 50;
+
+		if (!Number.isFinite(emailId) || emailId <= 0) {
+			emailId = timeSort ? 0 : 9999999999;
 		}
 
-		if (!emailId) {
+		if (!Number.isFinite(timeSort)) timeSort = 0;
+		if (!Number.isFinite(accountId) || accountId < 0) accountId = 0;
 
-			if (timeSort) {
-				emailId = 0;
-			} else {
-				emailId = 9999999999;
+		// 3) allReceive 未传/非法：尝试从账号读取；账号不存在则给默认值 0
+		if (!Number.isFinite(allReceive)) {
+			let accountRow = null;
+
+			// accountId 合法才查
+			if (accountId > 0) {
+				accountRow = await accountService.selectById(c, accountId);
 			}
 
-		}
-
-		if (isNaN(allReceive)) {
-			let accountRow = await accountService.selectById(c, accountId);
-			allReceive = accountRow.allReceive;
+			// accountRow 可能为 undefined/null，必须兜底
+			allReceive = Number(accountRow?.allReceive);
+			if (!Number.isFinite(allReceive)) allReceive = 0; // 默认：不全收
 		}
 
 		const query = orm(c)
-			.select({
-				...email,
-				starId: star.starId
-			})
+			.select({ ...email, starId: star.starId })
 			.from(email)
-			.leftJoin(
-				star,
-				and(
-					eq(star.emailId, email.emailId),
-					eq(star.userId, userId)
-				)
-			).leftJoin(
-				account,
-				eq(account.accountId, email.accountId)
-			)
+			.leftJoin(star, and(eq(star.emailId, email.emailId), eq(star.userId, userId)))
+			.leftJoin(account, eq(account.accountId, email.accountId))
 			.where(
 				and(
-					allReceive ? eq(1,1) : eq(email.accountId, accountId),
+					allReceive ? eq(1, 1) : eq(email.accountId, accountId),
 					eq(email.userId, userId),
 					timeSort ? gt(email.emailId, emailId) : lt(email.emailId, emailId),
 					eq(email.type, type),
@@ -79,57 +190,52 @@ const emailService = {
 				)
 			);
 
-		if (timeSort) {
-			query.orderBy(asc(email.emailId));
-		} else {
-			query.orderBy(desc(email.emailId));
-		}
+		if (timeSort) query.orderBy(asc(email.emailId));
+		else query.orderBy(desc(email.emailId));
 
 		const listQuery = query.limit(size).all();
 
-		const totalQuery = orm(c).select({ total: count() }).from(email)
-			.leftJoin(
-				account,
-				eq(account.accountId, email.accountId)
-			)
+		const totalQuery = orm(c)
+			.select({ total: count() })
+			.from(email)
+			.leftJoin(account, eq(account.accountId, email.accountId))
 			.where(
 				and(
-					allReceive ? eq(1,1) : eq(email.accountId, accountId),
+					allReceive ? eq(1, 1) : eq(email.accountId, accountId),
 					eq(email.userId, userId),
 					eq(email.type, type),
 					eq(email.isDel, isDel.NORMAL),
 					eq(account.isDel, isDel.NORMAL)
 				)
-		).get();
+			)
+			.get();
 
-		const latestEmailQuery = orm(c).select().from(email).where(
-			and(
-				allReceive ? eq(1,1) : eq(email.accountId, accountId),
-				eq(email.userId, userId),
-				eq(email.type, type),
-				eq(email.isDel, isDel.NORMAL)
-			))
-			.orderBy(desc(email.emailId)).limit(1).get();
+		const latestEmailQuery = orm(c)
+			.select()
+			.from(email)
+			.where(
+				and(
+					allReceive ? eq(1, 1) : eq(email.accountId, accountId),
+					eq(email.userId, userId),
+					eq(email.type, type),
+					eq(email.isDel, isDel.NORMAL)
+				)
+			)
+			.orderBy(desc(email.emailId))
+			.limit(1)
+			.get();
 
 		let [list, totalRow, latestEmail] = await Promise.all([listQuery, totalQuery, latestEmailQuery]);
 
-		list = list.map(item => ({
-			...item,
-			isStar: item.starId != null ? 1 : 0
-		}));
-
+		list = (list || []).map(item => ({ ...item, isStar: item.starId != null ? 1 : 0 }));
 
 		await this.emailAddAtt(c, list);
 
 		if (!latestEmail) {
-			latestEmail = {
-				emailId: 0,
-				accountId: accountId,
-				userId: userId,
-			}
+			latestEmail = { emailId: 0, accountId, userId };
 		}
 
-		return { list, total: totalRow.total, latestEmail };
+		return { list, total: totalRow?.total ?? 0, latestEmail };
 	},
 
 	async delete(c, params, userId) {
