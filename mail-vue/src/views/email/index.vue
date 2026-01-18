@@ -88,18 +88,22 @@ async function latest() {
 
     if (!scroll.value.firstLoad && settingStore.settings.autoRefresh === AutoRefreshEnum.ENABLED) {
       try {
-        const accountId = accountStore.currentAccountId
-        const allReceive = scroll.value.latestEmail?.allReceive
+        const accountId = accountStore.currentAccount?.accountId ?? accountStore.currentAccountId
+        const allReceive = accountStore.currentAccount?.allReceive ?? 0
         const curTimeSort = params.timeSort
         let list = []
 
         //确保发起请求时最后一个邮件是当前账号的,或者
+        if (!accountId && allReceive === 0) {
+          continue;
+        }
+
         if (accountId === scroll.value.latestEmail?.reqAccountId) {
           list = await emailLatest(latestId, accountId, allReceive);
         }
 
         //确保请求回来后，账号没有切换，时间排序没有改变，全部邮件类型没变
-        if (accountId === accountStore.currentAccountId && params.timeSort === curTimeSort && allReceive === accountStore.currentAccount.allReceive) {
+        if (accountId === (accountStore.currentAccount?.accountId ?? accountStore.currentAccountId) && params.timeSort === curTimeSort && allReceive === (accountStore.currentAccount?.allReceive ?? allReceive)) {
           if (list.length > 0) {
 
             for (let email of list) {
@@ -151,8 +155,19 @@ function cancelStar(email) {
 }
 
 function getEmailList(emailId, size) {
-  const accountId =  accountStore.currentAccountId;
-  const allReceive = accountStore.currentAccount.allReceive;
+  const accountId = accountStore.currentAccount?.accountId ?? accountStore.currentAccountId;
+  const allReceive = accountStore.currentAccount?.allReceive ?? 0;
+  if (!accountId && allReceive === 0) {
+    return Promise.resolve({
+      list: [],
+      total: 0,
+      latestEmail: {
+        emailId: 0,
+        reqAccountId: accountId ?? 0,
+        allReceive,
+      }
+    });
+  }
   return emailList(accountId, allReceive, emailId, params.timeSort, size, 0).then(data => {
     data.latestEmail.reqAccountId = accountId;
     data.latestEmail.allReceive = allReceive;
