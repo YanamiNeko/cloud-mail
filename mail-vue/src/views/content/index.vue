@@ -50,6 +50,7 @@
             </template>
           </el-alert>
           <el-scrollbar class="htm-scrollbar" :class="email.attList.length === 0 ? 'bottom-distance' : ''">
+            <ShadowHtml class="shadow-html" :html="formatImage(email.content)" v-if="email.content" />
             <ShadowHtml class="shadow-html" :html="externalContent.html" v-if="email.content" />
             <pre v-else class="email-text" >{{email.text}}</pre>
           </el-scrollbar>
@@ -90,6 +91,7 @@
 </template>
 <script setup>
 import ShadowHtml from '@/components/shadow-html/index.vue'
+import {reactive, ref, watch, onMounted, onUnmounted} from "vue";
 import {computed, reactive, ref, watch, onMounted, onUnmounted} from "vue";
 import {useRouter} from 'vue-router'
 import {ElMessage, ElMessageBox} from 'element-plus'
@@ -214,6 +216,49 @@ function stripExternalResources(content) {
     }
   })
 
+  doc.querySelectorAll('[background]').forEach(element => {
+    const background = element.getAttribute('background')
+    if (isExternalUrl(background)) {
+      hasBlocked = true
+      element.setAttribute('data-blocked-background', background)
+      element.removeAttribute('background')
+    }
+  })
+
+  doc.querySelectorAll('[style]').forEach(element => {
+    const style = element.getAttribute('style') || ''
+    if (!style) return
+    const blockedStyle = style.replace(/url\(([^)]+)\)/gi, (match, rawUrl) => {
+      const cleaned = rawUrl.trim().replace(/^['"]|['"]$/g, '')
+      if (isExternalUrl(cleaned)) {
+        hasBlocked = true
+        return 'none'
+      }
+      return match
+    })
+    if (blockedStyle !== style) {
+      element.setAttribute('data-blocked-style', style)
+      element.setAttribute('style', blockedStyle)
+    }
+  })
+
+  doc.querySelectorAll('style').forEach(element => {
+    const cssText = element.textContent || ''
+    if (!cssText) return
+    const blockedCss = cssText.replace(/url\(([^)]+)\)/gi, (match, rawUrl) => {
+      const cleaned = rawUrl.trim().replace(/^['"]|['"]$/g, '')
+      if (isExternalUrl(cleaned)) {
+        hasBlocked = true
+        return 'none'
+      }
+      return match
+    })
+    if (blockedCss !== cssText) {
+      element.setAttribute('data-blocked-css', cssText)
+      element.textContent = blockedCss
+    }
+  })
+
   return { html: doc.body.innerHTML || '', hasBlocked }
 }
 
@@ -234,6 +279,21 @@ function restoreBlockedResources(content) {
   doc.querySelectorAll('[data-blocked-href]').forEach(element => {
     element.setAttribute('href', element.getAttribute('data-blocked-href'))
     element.removeAttribute('data-blocked-href')
+  })
+
+  doc.querySelectorAll('[data-blocked-background]').forEach(element => {
+    element.setAttribute('background', element.getAttribute('data-blocked-background'))
+    element.removeAttribute('data-blocked-background')
+  })
+
+  doc.querySelectorAll('[data-blocked-style]').forEach(element => {
+    element.setAttribute('style', element.getAttribute('data-blocked-style'))
+    element.removeAttribute('data-blocked-style')
+  })
+
+  doc.querySelectorAll('style[data-blocked-css]').forEach(element => {
+    element.textContent = element.getAttribute('data-blocked-css')
+    element.removeAttribute('data-blocked-css')
   })
 
   return doc.body.innerHTML || ''
@@ -384,7 +444,15 @@ const handleDelete = () => {
 
     .external-alert {
       margin-bottom: 12px;
-      max-width: 860px;
+      width: 100%;
+      max-width: 980px;
+      border-radius: 8px;
+      :deep(.el-alert__title) {
+        font-weight: 600;
+      }
+      :deep(.el-alert__description) {
+        margin-top: 4px;
+      }
     }
 
     .external-alert-actions {
@@ -392,7 +460,7 @@ const handleDelete = () => {
       flex-wrap: wrap;
       gap: 10px;
       align-items: center;
-      justify-content: space-between;
+      justify-content: flex-start;
     }
 
     .att {
