@@ -33,8 +33,24 @@
             <el-alert v-if="email.status === 4" :closable="false" :title="$t('complained')" class="email-msg" type="warning" show-icon />
             <el-alert v-if="email.status === 5" :closable="false" :title="$t('delayed')" class="email-msg" type="warning" show-icon />
           </div>
+          <el-alert
+              v-if="externalContent.hasBlocked && !allowExternal"
+              :closable="false"
+              class="external-alert"
+              type="warning"
+              :title="$t('externalContentBlocked')"
+          >
+            <template #description>
+              <div class="external-alert-actions">
+                <span>{{ $t('externalContentDesc') }}</span>
+                <el-button size="small" type="primary" @click="allowExternal = true">
+                  {{ $t('loadExternalContent') }}
+                </el-button>
+              </div>
+            </template>
+          </el-alert>
           <el-scrollbar class="htm-scrollbar" :class="email.attList.length === 0 ? 'bottom-distance' : ''">
-            <ShadowHtml class="shadow-html" :html="formatImage(email.content)" v-if="email.content" />
+            <ShadowHtml class="shadow-html" :html="externalContent.html" v-if="email.content" />
             <pre v-else class="email-text" >{{email.text}}</pre>
           </el-scrollbar>
           <div class="att" v-if="email.attList.length > 0">
@@ -74,7 +90,7 @@
 </template>
 <script setup>
 import ShadowHtml from '@/components/shadow-html/index.vue'
-import {reactive, ref, watch, onMounted, onUnmounted} from "vue";
+import {computed, reactive, ref, watch, onMounted, onUnmounted} from "vue";
 import {useRouter} from 'vue-router'
 import {ElMessage, ElMessageBox} from 'element-plus'
 import {emailDelete, emailRead} from "@/request/email.js";
@@ -100,10 +116,15 @@ const router = useRouter()
 const email = emailStore.contentData.email
 const showPreview = ref(false)
 const srcList = reactive([])
+const allowExternal = ref(false)
 
 const { t } = useI18n()
 watch(() => accountStore.currentAccountId, () => {
   handleBack()
+})
+
+watch(() => email.emailId, () => {
+  allowExternal.value = false
 })
 
 onMounted(() => {
@@ -130,6 +151,163 @@ function formatImage(content) {
   const domain = settingStore.settings.r2Domain;
   return  content.replace(/{{domain}}/g, toOssDomain(domain) + '/');
 }
+
+function isExternalUrl(url) {
+  if (!url) return false
+  const trimmed = url.trim()
+  if (
+      trimmed.startsWith('data:') ||
+      trimmed.startsWith('cid:') ||
+      trimmed.startsWith('blob:') ||
+      trimmed.startsWith('mailto:') ||
+      trimmed.startsWith('tel:') ||
+      trimmed.startsWith('#')
+  ) {
+    return false
+  }
+  try {
+    const parsed = new URL(trimmed, window.location.origin)
+    const allowedOrigins = new Set([window.location.origin])
+    const ossDomain = toOssDomain(settingStore.settings.r2Domain)
+    if (ossDomain) {
+      allowedOrigins.add(new URL(ossDomain).origin)
+    }
+    return !allowedOrigins.has(parsed.origin)
+  } catch (error) {
+    return false
+  }
+}
+
+function srcsetHasExternal(srcset) {
+  if (!srcset) return false
+  return srcset.split(',')
+      .map(entry => entry.trim().split(' ')[0])
+      .some(url => isExternalUrl(url))
+}
+
+function stripExternalResources(content) {
+  let hasBlocked = false
+  const parser = new DOMParser()
+  const doc = parser.parseFromString(content, 'text/html')
+
+  doc.querySelectorAll('[src]').forEach(element => {
+    const src = element.getAttribute('src')
+    if (isExternalUrl(src)) {
+      hasBlocked = true
+      element.setAttribute('data-blocked-src', src)
+      element.removeAttribute('src')
+    }
+    const srcset = element.getAttribute('srcset')
+    if (srcset && srcsetHasExternal(srcset)) {
+      hasBlocked = true
+      element.setAttribute('data-blocked-srcset', srcset)
+      element.removeAttribute('srcset')
+    }
+  })
+
+  doc.querySelectorAll('link[href]').forEach(element => {
+    const href = element.getAttribute('href')
+    if (isExternalUrl(href)) {
+      hasBlocked = true
+      element.setAttribute('data-blocked-href', href)
+      element.removeAttribute('href')
+    }
+  })
+
+  doc.querySelectorAll('[background]').forEach(element => {
+    const background = element.getAttribute('background')
+    if (isExternalUrl(background)) {
+      hasBlocked = true
+      element.setAttribute('data-blocked-background', background)
+      element.removeAttribute('background')
+    }
+  })
+
+  doc.querySelectorAll('[style]').forEach(element => {
+    const style = element.getAttribute('style') || ''
+    if (!style) return
+    const blockedStyle = style.replace(/url\(([^)]+)\)/gi, (match, rawUrl) => {
+      const cleaned = rawUrl.trim().replace(/^['"]|['"]$/g, '')
+      if (isExternalUrl(cleaned)) {
+        hasBlocked = true
+        return 'none'
+      }
+      return match
+    })
+    if (blockedStyle !== style) {
+      element.setAttribute('data-blocked-style', style)
+      element.setAttribute('style', blockedStyle)
+    }
+  })
+
+  doc.querySelectorAll('style').forEach(element => {
+    const cssText = element.textContent || ''
+    if (!cssText) return
+    const blockedCss = cssText.replace(/url\(([^)]+)\)/gi, (match, rawUrl) => {
+      const cleaned = rawUrl.trim().replace(/^['"]|['"]$/g, '')
+      if (isExternalUrl(cleaned)) {
+        hasBlocked = true
+        return 'none'
+      }
+      return match
+    })
+    if (blockedCss !== cssText) {
+      element.setAttribute('data-blocked-css', cssText)
+      element.textContent = blockedCss
+    }
+  })
+
+  return { html: doc.body.innerHTML || '', hasBlocked }
+}
+
+function restoreBlockedResources(content) {
+  const parser = new DOMParser()
+  const doc = parser.parseFromString(content, 'text/html')
+
+  doc.querySelectorAll('[data-blocked-src]').forEach(element => {
+    element.setAttribute('src', element.getAttribute('data-blocked-src'))
+    element.removeAttribute('data-blocked-src')
+  })
+
+  doc.querySelectorAll('[data-blocked-srcset]').forEach(element => {
+    element.setAttribute('srcset', element.getAttribute('data-blocked-srcset'))
+    element.removeAttribute('data-blocked-srcset')
+  })
+
+  doc.querySelectorAll('[data-blocked-href]').forEach(element => {
+    element.setAttribute('href', element.getAttribute('data-blocked-href'))
+    element.removeAttribute('data-blocked-href')
+  })
+
+  doc.querySelectorAll('[data-blocked-background]').forEach(element => {
+    element.setAttribute('background', element.getAttribute('data-blocked-background'))
+    element.removeAttribute('data-blocked-background')
+  })
+
+  doc.querySelectorAll('[data-blocked-style]').forEach(element => {
+    element.setAttribute('style', element.getAttribute('data-blocked-style'))
+    element.removeAttribute('data-blocked-style')
+  })
+
+  doc.querySelectorAll('style[data-blocked-css]').forEach(element => {
+    element.textContent = element.getAttribute('data-blocked-css')
+    element.removeAttribute('data-blocked-css')
+  })
+
+  return doc.body.innerHTML || ''
+}
+
+const externalContent = computed(() => {
+  const formatted = formatImage(email.content)
+  if (!formatted) {
+    return { html: '', hasBlocked: false }
+  }
+  const blockedContent = stripExternalResources(formatted)
+  if (allowExternal.value) {
+    return { html: restoreBlockedResources(blockedContent.html), hasBlocked: blockedContent.hasBlocked }
+  }
+  return blockedContent
+})
 
 function showImage(key) {
   if (!isImage(key)) return;
@@ -261,6 +439,27 @@ const handleDelete = () => {
   .content {
     display: flex;
     flex-direction: column;
+
+    .external-alert {
+      margin-bottom: 12px;
+      width: 100%;
+      max-width: 980px;
+      border-radius: 8px;
+      :deep(.el-alert__title) {
+        font-weight: 600;
+      }
+      :deep(.el-alert__description) {
+        margin-top: 4px;
+      }
+    }
+
+    .external-alert-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: flex-start;
+    }
 
     .att {
       margin-top: 30px;
