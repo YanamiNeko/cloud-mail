@@ -217,15 +217,38 @@ function stripExternalResources(content) {
   return { html: doc.body.innerHTML || '', hasBlocked }
 }
 
+function restoreBlockedResources(content) {
+  const parser = new DOMParser()
+  const doc = parser.parseFromString(content, 'text/html')
+
+  doc.querySelectorAll('[data-blocked-src]').forEach(element => {
+    element.setAttribute('src', element.getAttribute('data-blocked-src'))
+    element.removeAttribute('data-blocked-src')
+  })
+
+  doc.querySelectorAll('[data-blocked-srcset]').forEach(element => {
+    element.setAttribute('srcset', element.getAttribute('data-blocked-srcset'))
+    element.removeAttribute('data-blocked-srcset')
+  })
+
+  doc.querySelectorAll('[data-blocked-href]').forEach(element => {
+    element.setAttribute('href', element.getAttribute('data-blocked-href'))
+    element.removeAttribute('data-blocked-href')
+  })
+
+  return doc.body.innerHTML || ''
+}
+
 const externalContent = computed(() => {
   const formatted = formatImage(email.content)
   if (!formatted) {
     return { html: '', hasBlocked: false }
   }
+  const blockedContent = stripExternalResources(formatted)
   if (allowExternal.value) {
-    return { html: formatted, hasBlocked: false }
+    return { html: restoreBlockedResources(blockedContent.html), hasBlocked: blockedContent.hasBlocked }
   }
-  return stripExternalResources(formatted)
+  return blockedContent
 })
 
 function showImage(key) {
