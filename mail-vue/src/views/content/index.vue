@@ -16,7 +16,6 @@
         height="16"
         @click="handleDelete"
       />
-
       <span class="star" v-if="emailStore.contentData.showStar">
         <Icon
           class="icon"
@@ -35,7 +34,6 @@
           height="18"
         />
       </span>
-
       <Icon
         class="icon"
         v-if="emailStore.contentData.showReply"
@@ -49,9 +47,7 @@
 
     <el-scrollbar class="scrollbar">
       <div class="container">
-        <div class="email-title">
-          {{ email.subject }}
-        </div>
+        <div class="email-title">{{ email.subject }}</div>
 
         <div class="content">
           <div class="email-info">
@@ -100,9 +96,9 @@
             />
           </div>
 
-          <!-- 外部内容阻止提示 -->
+          <!-- ✅ 外链提示（只要检测到外链且未允许就显示） -->
           <el-alert
-            v-if="externalState.hasBlocked && !allowExternal"
+            v-if="externalState.hasExternal && !allowExternal"
             :closable="false"
             class="external-alert"
             type="warning"
@@ -114,6 +110,11 @@
                 <el-button size="small" type="primary" @click="allowExternal = true">
                   {{ $t("loadExternalContent") }}
                 </el-button>
+
+                <!-- 可选调试：需要时打开 SHOW_EXTERNAL_DEBUG -->
+                <span v-if="SHOW_EXTERNAL_DEBUG" class="debug-state">
+                  (debug: hasExternal={{ externalState.hasExternal }}, allow={{ allowExternal }})
+                </span>
               </div>
             </template>
           </el-alert>
@@ -122,12 +123,8 @@
             class="htm-scrollbar"
             :class="email.attList.length === 0 ? 'bottom-distance' : ''"
           >
-            <!-- 只渲染一次，默认 safeHtml，点击后 fullHtml -->
-            <ShadowHtml
-              v-if="email.content"
-              class="shadow-html"
-              :html="renderHtml"
-            />
+            <!-- ✅ 只渲染一次：默认 safeHtml，允许后 fullHtml -->
+            <ShadowHtml v-if="email.content" class="shadow-html" :html="renderHtml" />
             <pre v-else class="email-text">{{ email.text }}</pre>
           </el-scrollbar>
 
@@ -200,6 +197,11 @@ import { cvtR2Url, toOssDomain } from "@/utils/convert.js";
 import { getIconByName } from "@/utils/icon-utils.js";
 import { EmailUnreadEnum } from "@/enums/email-enum.js";
 
+/**
+ * ✅ 调试开关：需要排查按钮为何不出现时设为 true
+ */
+const SHOW_EXTERNAL_DEBUG = false;
+
 const uiStore = useUiStore();
 const settingStore = useSettingStore();
 const accountStore = useAccountStore();
@@ -214,11 +216,15 @@ const srcList = reactive([]);
 
 const allowExternal = ref(false);
 
-// 用 reactive 缓存处理后的 HTML，避免 computed 每次解析 DOM
+// ✅ 缓存 HTML 与外链检测结果
 const externalState = reactive({
   safeHtml: "",
   fullHtml: "",
-  hasBlocked: false,
+  hasExternal: false, // 只用于按钮显示条件
+});
+
+const renderHtml = computed(() => {
+  return allowExternal.value ? externalState.fullHtml : externalState.safeHtml;
 });
 
 watch(
@@ -237,7 +243,7 @@ watch(
   { immediate: true }
 );
 
-// 如果域名变化会影响 {{domain}} 替换，也要重算
+// r2Domain 变化也会影响 {{domain}} 替换
 watch(
   () => settingStore.settings.r2Domain,
   () => {
@@ -246,6 +252,9 @@ watch(
 );
 
 onMounted(() => {
+  // ✅ 保险：首次进入强制构建
+  rebuildHtml();
+
   if (emailStore.contentData.showUnread && email.unread === EmailUnreadEnum.UNREAD) {
     email.unread = EmailUnreadEnum.READ;
     emailRead([email.emailId]);
@@ -256,10 +265,6 @@ onUnmounted(() => {
   emailStore.contentData.showUnread = false;
 });
 
-const renderHtml = computed(() => {
-  return allowExternal.value ? externalState.fullHtml : externalState.safeHtml;
-});
-
 function openReply() {
   uiStore.writerRef.openReply(email);
 }
@@ -268,9 +273,6 @@ function toMessage(message) {
   return message ? JSON.parse(message).message : "";
 }
 
-/**
- * 仅做你原本的 {{domain}} 替换
- */
 function formatImage(content) {
   content = content || "";
   const domain = settingStore.settings.r2Domain;
@@ -278,30 +280,32 @@ function formatImage(content) {
 }
 
 /**
- * 重新生成 fullHtml（不剥离外链但做安全净化） 和 safeHtml（剥离外链）
+ * ✅ 核心：构建 safeHtml（剥离外链）和 fullHtml（允许外链）
  */
 function rebuildHtml() {
   const formatted = formatImage(email.content || "");
   if (!formatted) {
     externalState.safeHtml = "";
     externalState.fullHtml = "";
-    externalState.hasBlocked = false;
+    externalState.hasExternal = false;
     return;
   }
 
   const sanitizedFull = sanitizeEmailHtml(formatted);
-  const blocked = stripExternalResources(sanitizedFull);
 
-  externalState.fullHtml = sanitizedFull;
+  // ✅ 先可靠检测外链，用于按钮显示
+  externalState.hasExternal = detectHasExternal(sanitizedFull);
+
+  // ✅ safeHtml：剥离外链
+  const blocked = stripExternalResources(sanitizedFull);
   externalState.safeHtml = blocked.html;
-  externalState.hasBlocked = blocked.hasBlocked;
+
+  // ✅ fullHtml：允许外链（但仍做净化）
+  externalState.fullHtml = sanitizedFull;
 }
 
 /**
- * 判断是否外链
- * - 允许：data/cid/blob/mailto/tel/# 这类
- * - 允许同源 + 允许 ossDomain 源
- * - 其它都认为外链
+ * 外链判断
  */
 function isExternalUrl(url) {
   if (!url) return false;
@@ -328,7 +332,7 @@ function isExternalUrl(url) {
 
     return !allowedOrigins.has(parsed.origin);
   } catch {
-    // URL 不合法，保守一点：不当外链，避免误杀
+    // URL 不合法就不当外链，避免误杀
     return false;
   }
 }
@@ -342,8 +346,67 @@ function srcsetHasExternal(srcset) {
 }
 
 /**
- * 剥离外链资源：
- * - [src], [srcset], link[href], [background], style/url(...), <style>/url(...)
+ * ✅ 更可靠的外链检测：只用于判断按钮是否显示
+ */
+function detectHasExternal(content) {
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(content, "text/html");
+
+    // [src], [srcset]
+    const srcEls = [...doc.querySelectorAll("[src]")];
+    for (const el of srcEls) {
+      const src = el.getAttribute("src");
+      if (isExternalUrl(src)) return true;
+
+      const srcset = el.getAttribute("srcset");
+      if (srcset && srcsetHasExternal(srcset)) return true;
+    }
+
+    // link[href]
+    const linkEls = [...doc.querySelectorAll("link[href]")];
+    for (const el of linkEls) {
+      const href = el.getAttribute("href");
+      if (isExternalUrl(href)) return true;
+    }
+
+    // [background]
+    const bgEls = [...doc.querySelectorAll("[background]")];
+    for (const el of bgEls) {
+      const bg = el.getAttribute("background");
+      if (isExternalUrl(bg)) return true;
+    }
+
+    // style 属性 url(...)
+    const styleAttrEls = [...doc.querySelectorAll("[style]")];
+    for (const el of styleAttrEls) {
+      const style = el.getAttribute("style") || "";
+      const hits = style.match(/url\(([^)]+)\)/gi) || [];
+      for (const m of hits) {
+        const raw = m.replace(/^url\(|\)$/gi, "").trim().replace(/^['"]|['"]$/g, "");
+        if (isExternalUrl(raw)) return true;
+      }
+    }
+
+    // style 标签 url(...)
+    const styleTags = [...doc.querySelectorAll("style")];
+    for (const el of styleTags) {
+      const css = el.textContent || "";
+      const hits = css.match(/url\(([^)]+)\)/gi) || [];
+      for (const m of hits) {
+        const raw = m.replace(/^url\(|\)$/gi, "").trim().replace(/^['"]|['"]$/g, "");
+        if (isExternalUrl(raw)) return true;
+      }
+    }
+
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * ✅ 剥离外链资源
  */
 function stripExternalResources(content) {
   let hasBlocked = false;
@@ -366,7 +429,7 @@ function stripExternalResources(content) {
     }
   });
 
-  // link[href]（外部 css / font 等）
+  // link[href]
   doc.querySelectorAll("link[href]").forEach((el) => {
     const href = el.getAttribute("href");
     if (isExternalUrl(href)) {
@@ -430,9 +493,7 @@ function stripExternalResources(content) {
 }
 
 /**
- * 邮件 HTML 基础净化（推荐）
- * - 移除 script/iframe/object/embed（避免执行/嵌入）
- * - 移除 inline on* 事件（onload/onerror/...）
+ * ✅ 邮件 HTML 净化
  */
 function sanitizeEmailHtml(content) {
   const parser = new DOMParser();
@@ -450,7 +511,7 @@ function sanitizeEmailHtml(content) {
 }
 
 /**
- * 附件图片预览
+ * 附件预览
  */
 function showImage(key) {
   if (!isImage(key)) return;
@@ -474,7 +535,7 @@ function formateReceive(recipient) {
 }
 
 /**
- * 星标逻辑（保持你原本的）
+ * 星标
  */
 function changeStar() {
   if (email.isStar) {
@@ -518,24 +579,15 @@ const handleDelete = () => {
   }).then(() => {
     if (emailStore.contentData.delType === "logic") {
       emailDelete(email.emailId).then(() => {
-        ElMessage({
-          message: t("delSuccessMsg"),
-          type: "success",
-          plain: true,
-        });
+        ElMessage({ message: t("delSuccessMsg"), type: "success", plain: true });
         emailStore.deleteIds = [email.emailId];
       });
     } else {
       allEmailDelete(email.emailId).then(() => {
-        ElMessage({
-          message: t("delSuccessMsg"),
-          type: "success",
-          plain: true,
-        });
+        ElMessage({ message: t("delSuccessMsg"), type: "success", plain: true });
         emailStore.deleteIds = [email.emailId];
       });
     }
-
     router.back();
   });
 };
@@ -574,9 +626,7 @@ const handleDelete = () => {
 
 .container {
   font-size: 14px;
-  padding-left: 20px;
-  padding-right: 20px;
-  padding-top: 10px;
+  padding: 10px 20px 0;
 
   @media (max-width: 1023px) {
     padding-left: 15px;
@@ -615,9 +665,13 @@ const handleDelete = () => {
       justify-content: flex-start;
     }
 
+    .debug-state {
+      opacity: 0.7;
+      font-size: 12px;
+    }
+
     .att {
-      margin-top: 30px;
-      margin-bottom: 30px;
+      margin: 30px 0;
       border: 1px solid var(--light-border-color);
       padding: 14px;
       border-radius: 6px;
@@ -663,8 +717,7 @@ const handleDelete = () => {
         }
 
         .att-name {
-          margin-left: 8px;
-          margin-right: 8px;
+          margin: 0 8px;
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
@@ -677,7 +730,6 @@ const handleDelete = () => {
           align-items: center;
           display: flex;
           gap: 8px;
-          cursor: pointer;
 
           a {
             color: var(--secondary-text-color);
