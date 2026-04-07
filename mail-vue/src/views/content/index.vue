@@ -43,6 +43,19 @@
         width="20"
         height="20"
       />
+      <el-tooltip
+        v-if="externalState.hasExternal && !allowExternal"
+        :content="$t('loadExternalContent')"
+        placement="bottom"
+      >
+        <Icon
+          class="icon icon-load-external"
+          icon="material-symbols:image-outline"
+          width="20"
+          height="20"
+          @click="allowExternal = true"
+        />
+      </el-tooltip>
     </div>
 
     <el-scrollbar class="scrollbar">
@@ -96,28 +109,16 @@
             />
           </div>
 
-          <!-- ✅ 外链提示（只要检测到外链且未允许就显示） -->
-          <el-alert
-            v-if="externalState.hasExternal && !allowExternal"
-            :closable="false"
-            class="external-alert"
-            type="warning"
-            :title="$t('externalContentBlocked')"
-          >
-            <template #description>
-              <div class="external-alert-actions">
-                <span>{{ $t("externalContentDesc") }}</span>
-                <el-button size="small" type="primary" @click="allowExternal = true">
-                  {{ $t("loadExternalContent") }}
-                </el-button>
-
-                <!-- 可选调试：需要时打开 SHOW_EXTERNAL_DEBUG -->
-                <span v-if="SHOW_EXTERNAL_DEBUG" class="debug-state">
-                  (debug: hasExternal={{ externalState.hasExternal }}, allow={{ allowExternal }})
-                </span>
-              </div>
-            </template>
-          </el-alert>
+          <!-- 外链提示（只要检测到外链且未允许就显示） -->
+          <div v-if="externalState.hasExternal && !allowExternal" class="external-alert">
+            <span class="external-alert-title">{{ $t("externalContentBlocked") }}</span>
+            <div class="external-alert-actions">
+              <span>{{ $t("externalContentDesc") }}</span>
+              <el-button size="small" type="primary" @click="allowExternal = true">
+                {{ $t("loadExternalContent") }}
+              </el-button>
+            </div>
+          </div>
 
           <el-scrollbar
             class="htm-scrollbar"
@@ -196,11 +197,6 @@ import { getExtName, formatBytes } from "@/utils/file-utils.js";
 import { cvtR2Url, toOssDomain } from "@/utils/convert.js";
 import { getIconByName } from "@/utils/icon-utils.js";
 import { EmailUnreadEnum } from "@/enums/email-enum.js";
-
-/**
- * ✅ 调试开关：需要排查按钮为何不出现时设为 true
- */
-const SHOW_EXTERNAL_DEBUG = false;
 
 const uiStore = useUiStore();
 const settingStore = useSettingStore();
@@ -406,7 +402,7 @@ function detectHasExternal(content) {
 }
 
 /**
- * ✅ 剥离外链资源
+ * 剥离外链资源，同时保留 <head> 中的 <style> 标签
  */
 function stripExternalResources(content) {
   let hasBlocked = false;
@@ -489,11 +485,16 @@ function stripExternalResources(content) {
     }
   });
 
-  return { html: doc.body.innerHTML || "", hasBlocked };
+  // 保留 <head> 中的 <style> 标签（外链 CSS 已在上面被处理）
+  const headStyles = [...doc.querySelectorAll("head style")]
+    .map((s) => s.outerHTML)
+    .join("\n");
+
+  return { html: headStyles + (doc.body.innerHTML || ""), hasBlocked };
 }
 
 /**
- * ✅ 邮件 HTML 净化
+ * 邮件 HTML 净化，保留 <head> 中的 <style> 标签
  */
 function sanitizeEmailHtml(content) {
   const parser = new DOMParser();
@@ -507,7 +508,12 @@ function sanitizeEmailHtml(content) {
     });
   });
 
-  return doc.body.innerHTML || "";
+  // 保留 <head> 中的 <style> 标签，拼接到 body 内容前
+  const headStyles = [...doc.querySelectorAll("head style")]
+    .map((s) => s.outerHTML)
+    .join("\n");
+
+  return headStyles + (doc.body.innerHTML || "");
 }
 
 /**
@@ -617,6 +623,10 @@ const handleDelete = () => {
   .icon {
     cursor: pointer;
   }
+
+  .icon-load-external {
+    color: var(--el-color-warning);
+  }
 }
 
 .scrollbar {
@@ -648,12 +658,17 @@ const handleDelete = () => {
       width: 100%;
       max-width: 980px;
       border-radius: 8px;
+      background-color: var(--el-color-warning-light-9, #fdf6ec);
+      border: 1px solid var(--el-color-warning-light-5, #f5dab1);
+      padding: 10px 14px;
+      box-sizing: border-box;
 
-      :deep(.el-alert__title) {
+      .external-alert-title {
         font-weight: 600;
-      }
-      :deep(.el-alert__description) {
-        margin-top: 4px;
+        font-size: 14px;
+        color: var(--el-color-warning-dark-2, #b88230);
+        display: block;
+        margin-bottom: 6px;
       }
     }
 
@@ -663,11 +678,8 @@ const handleDelete = () => {
       gap: 10px;
       align-items: center;
       justify-content: flex-start;
-    }
-
-    .debug-state {
-      opacity: 0.7;
-      font-size: 12px;
+      font-size: 13px;
+      color: var(--el-text-color-regular, #606266);
     }
 
     .att {
