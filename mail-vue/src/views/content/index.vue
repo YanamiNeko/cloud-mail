@@ -111,13 +111,9 @@
 
           <!-- 外链提示（只要检测到外链且未允许就显示） -->
           <div v-if="externalState.hasExternal && !allowExternal" class="external-alert">
-            <span class="external-alert-title">{{ $t("externalContentBlocked") }}</span>
-            <div class="external-alert-actions">
-              <span>{{ $t("externalContentDesc") }}</span>
-              <el-button size="small" type="primary" @click="allowExternal = true">
-                {{ $t("loadExternalContent") }}
-              </el-button>
-            </div>
+            <Icon icon="material-symbols:image-outline" width="15" height="15" class="external-alert-icon" />
+            <span class="external-alert-text">{{ $t("externalContentDesc") }}</span>
+            <span class="external-alert-btn" @click="allowExternal = true">{{ $t("loadExternalContent") }}</span>
           </div>
 
           <el-scrollbar
@@ -654,32 +650,39 @@ const handleDelete = () => {
     flex-direction: column;
 
     .external-alert {
-      margin-bottom: 12px;
-      width: 100%;
-      max-width: 980px;
-      border-radius: 8px;
-      background-color: var(--el-color-warning-light-9, #fdf6ec);
-      border: 1px solid var(--el-color-warning-light-5, #f5dab1);
-      padding: 10px 14px;
-      box-sizing: border-box;
-
-      .external-alert-title {
-        font-weight: 600;
-        font-size: 14px;
-        color: var(--el-color-warning-dark-2, #b88230);
-        display: block;
-        margin-bottom: 6px;
-      }
-    }
-
-    .external-alert-actions {
       display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
       align-items: center;
-      justify-content: flex-start;
-      font-size: 13px;
-      color: var(--el-text-color-regular, #606266);
+      gap: 6px;
+      margin-bottom: 8px;
+      padding: 5px 10px;
+      background-color: var(--el-color-warning-light-9, #fdf6ec);
+      border-left: 3px solid var(--el-color-warning, #e6a23c);
+      border-radius: 2px;
+      font-size: 12px;
+      color: var(--el-text-color-secondary, #909399);
+
+      .external-alert-icon {
+        color: var(--el-color-warning, #e6a23c);
+        flex-shrink: 0;
+      }
+
+      .external-alert-text {
+        flex: 1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .external-alert-btn {
+        flex-shrink: 0;
+        color: var(--el-color-primary, #409eff);
+        cursor: pointer;
+        white-space: nowrap;
+
+        &:hover {
+          text-decoration: underline;
+        }
+      }
     }
 
     .att {
